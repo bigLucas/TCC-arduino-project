@@ -62,7 +62,6 @@ void setup() {
     digitalWrite(slaveSelectPin, HIGH);
     pinMode(start, INPUT_PULLUP);
     pinMode(RECEIVING_BT_DATA_LED, OUTPUT);
-    // SPI.begin(18, 19, 23, 5);
     SerialBT.begin("PLC - Bluetooth Recorder");
     Serial.begin(9600);
 }
@@ -87,27 +86,7 @@ void readFlash()
     delay(100);
     habilitaProg();
     writeFullProgram();
-//    Serial.println("\nDEBUG BLUETOOTH newBytes: ");
-//    for(int i=0; i<newBytes.size(); i++) {
-//        if(((i % 16) == 0) && i != 0) {
-//            Serial.println();
-//        }
-//        Serial.print(newBytes[i], HEX);
-//    }
-//    Serial.println("\nDEBUG BLUETOOTH bytes: ");
-//    for(int i=0; i<bytes.size(); i++) {
-//        if(((i % 16) == 0) && i != 0) {
-//            Serial.println();
-//        }
-//        Serial.print(bytes[i], HEX);
-//    }
-    // spi_transfer4(0xAC, 0x80, 0x00, 0x00);
     delay(10);
-//    Serial.println("\nDEBUG LEITURA FLASH: ");
-//    printMemory(0x0000, 0x01AE);
-//    Serial.println();
-//    Serial.println("\nDEBUG LEITURA BOOT: ");
-//    printMemory(0x7F00, 0x7FFF);
     digitalWrite(slaveSelectPin, HIGH);
 }
 
@@ -197,7 +176,6 @@ void writeProgram(std::vector<uint8_t> program, uint16_t addr) {
         if(cont == 64) {
             writeBytes(flashAddr - cont);
             delay(10);
-            // verifyMemory(flashAddr, program, i - ((64*2)-2), 64);
             if (verifyMemory(flashAddr, program, i - ((64*2)-2), 64)) {
                 if(contErrors > 10) {
                     digitalWrite(RECEIVING_BT_DATA_LED, LOW);
