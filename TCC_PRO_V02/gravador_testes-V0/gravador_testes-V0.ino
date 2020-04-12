@@ -73,34 +73,50 @@ void loop() {
     }
     if(digitalRead(start)==LOW) {
         digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
-        readFlash();
+        recordFlash();
         newBytes = {};
     }
     delay(10);
     digitalWrite(RECEIVING_BT_DATA_LED, LOW);
 }
 
-void readFlash()
-{    
-    SPI.begin(18, 19, 23, 5);
-    delay(100);
-    habilitaProg();
-    writeFullProgram();
-    delay(10);
+void recordFlash() {
+    bool success = false;
+    int contErros = 0;
+    while ((success == false) && (contErros <= 4)) {
+        SPI.begin(18, 19, 23, 5);
+        delay(100);
+        habilitaProg();
+        delay(10);
+        success = writeFullProgram();
+        delay(10);
+        contErros++;
+        SPI.end();
+    }
+    if (success == true) {
+        Serial.println("\nGreat job!");   
+    }
     digitalWrite(slaveSelectPin, HIGH);
 }
 
-void writeFullProgram(){
+bool writeFullProgram(){
+    bool newFlashRes = true;
+    bool bootloaderRes = false;
+    bool finalFlashRes = false;
     spi_transfer4(0xAC, 0x80, 0x00, 0x00);
     delay(10);
     if (newBytes.size() >= 1) {
-        writeProgram(newBytes, 0x0000);
+        newFlashRes = writeProgram(newBytes, 0x0000);
         delay(10);
     }
-    writeProgram(bootloader, 0x7F00);
+    bootloaderRes = writeProgram(bootloader, 0x7F00);
     delay(10);
-    writeProgram(finalFlash, 0x7FFE);
+    finalFlashRes = writeProgram(finalFlash, 0x7FFE);
     delay(10);
+    if (newFlashRes == false || bootloaderRes == false || finalFlashRes == false) {
+        return false;
+    }
+    return true;
 }
 
 void printFlashByAddress(uint16_t addr) {
@@ -136,15 +152,15 @@ void printMemory(uint16_t startAddr, uint16_t finalAddr) {
 }
 
 void habilitaProg() {
-    uint8_t response02 = 0;
+    uint8_t response = 0;
     digitalWrite(slaveSelectPin, LOW);
     delay(1000);
     Serial.print("\nHabilitando programacao...\t");
     SPI.transfer(0xAC);
     SPI.transfer(0x53);
-    response02 = SPI.transfer(0x00);
+    response = SPI.transfer(0x00);
     SPI.transfer(0x00);
-    response02 != 0x53 ? Serial.print("NAO OK\n") : Serial.print("OK\n");
+    response != 0x53 ? Serial.print("NAO OK\n") : Serial.print("OK\n");
     return;
 }
 
@@ -163,7 +179,7 @@ void writeBytes(uint16_t addr) {
     return;
 }
 
-void writeProgram(std::vector<uint8_t> program, uint16_t addr) {
+bool writeProgram(std::vector<uint8_t> program, uint16_t addr) {
     uint16_t flashAddr = addr; 
     int cont = 0;
     int i = 0;
@@ -176,7 +192,7 @@ void writeProgram(std::vector<uint8_t> program, uint16_t addr) {
         if(cont == 64) {
             writeBytes(flashAddr - cont);
             delay(10);
-            if (verifyMemory(flashAddr, program, i - ((64*2)-2), 64)) {
+            if (!isMemoryCorrect(flashAddr, program, i - ((64*2)-2), 64)) {
                 if(contErrors > 10) {
                     digitalWrite(RECEIVING_BT_DATA_LED, LOW);
                     delay(100);
@@ -185,7 +201,7 @@ void writeProgram(std::vector<uint8_t> program, uint16_t addr) {
                     digitalWrite(RECEIVING_BT_DATA_LED, LOW);
                     delay(100);
                     digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
-                    return;
+                    return false;
                 }
                 Serial.print("flashAddr : ");
                 Serial.print(flashAddr, HEX);
@@ -199,19 +215,20 @@ void writeProgram(std::vector<uint8_t> program, uint16_t addr) {
         }
     }
     if (cont == 0) {
-        return;
+        return true;
     }
     writeBytes(flashAddr - cont);
     delay(10);
-    verifyMemory(flashAddr, program, i - (cont*2), (i/2));
-    return;
+    // posso refatorar aqui, colocar direto o return recebendo da função
+    if (!isMemoryCorrect(flashAddr, program, i - (cont*2), (i/2))) {
+        return false;
+    }
+    return true;
 }
 
-bool verifyMemory(uint16_t flashAddr, std::vector<uint8_t> program, int dataAddr, int wordsQuantity) {
-    Serial.println("\nDEBUG correct write");
+bool isMemoryCorrect(uint16_t flashAddr, std::vector<uint8_t> program, int dataAddr, int wordsQuantity) {
     uint16_t memoryBytes = 0;
     int dataIndex = dataAddr;
-    Serial.println(dataIndex);
     for (uint16_t i = flashAddr - wordsQuantity; i < flashAddr; i++) {
         uint16_t dataBytes = 0;
         memoryBytes = readFlashByAddress(i);
@@ -227,13 +244,12 @@ bool verifyMemory(uint16_t flashAddr, std::vector<uint8_t> program, int dataAddr
             Serial.print(", bytes on memory: ");
             Serial.print(memoryBytes, HEX);
             Serial.println();
-            return true;
+            return false;
         }
         dataIndex += 2;
     }
-    return false;
+    return true;
 }
-
 
 uint8_t spi_transfer4(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4) {
     SPI.transfer(a1);
