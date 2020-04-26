@@ -101,19 +101,19 @@ void recordFlash() {
 
 bool writeFullProgram(){
     bool newFlashRes = true;
-    bool bootloaderRes = false;
-    bool finalFlashRes = false;
+//    bool bootloaderRes = false;
+//    bool finalFlashRes = false;
     spi_transfer4(0xAC, 0x80, 0x00, 0x00);
     delay(10);
     if (newBytes.size() >= 1) {
         newFlashRes = writeProgram(newBytes, 0x0000);
         delay(10);
     }
-    bootloaderRes = writeProgram(bootloader, 0x7F00);
-    delay(10);
-    finalFlashRes = writeProgram(finalFlash, 0x7FFE);
-    delay(10);
-    if (newFlashRes == false || bootloaderRes == false || finalFlashRes == false) {
+//    bootloaderRes = writeProgram(bootloader, 0x7F00);
+//    delay(10);
+//    finalFlashRes = writeProgram(finalFlash, 0x7FFE);
+//    delay(10);
+    if (newFlashRes == false) {
         return false;
     }
     return true;
