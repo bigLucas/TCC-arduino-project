@@ -74,7 +74,6 @@ void loop() {
     if(digitalRead(start)==LOW) {
         digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
         recordFlash();
-        newBytes = {};
     }
     delay(10);
     digitalWrite(RECEIVING_BT_DATA_LED, LOW);
@@ -94,26 +93,38 @@ void recordFlash() {
         SPI.end();
     }
     if (success == true) {
-        Serial.println("\nGreat job!");   
+        Serial.println("\nGreat job!");
+        digitalWrite(RECEIVING_BT_DATA_LED, LOW);
+        delay(1000);
+        digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
+        delay(1000);
+        digitalWrite(RECEIVING_BT_DATA_LED, LOW);
+        delay(1000);
+        digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
+        delay(1000);
+        digitalWrite(RECEIVING_BT_DATA_LED, LOW);
+        delay(1000);
+        digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
+        newBytes = {};
     }
     digitalWrite(slaveSelectPin, HIGH);
 }
 
 bool writeFullProgram(){
     bool newFlashRes = true;
-//    bool bootloaderRes = false;
-//    bool finalFlashRes = false;
+    bool bootloaderRes = false;
+    bool finalFlashRes = false;
     spi_transfer4(0xAC, 0x80, 0x00, 0x00);
     delay(10);
     if (newBytes.size() >= 1) {
         newFlashRes = writeProgram(newBytes, 0x0000);
         delay(10);
     }
-//    bootloaderRes = writeProgram(bootloader, 0x7F00);
-//    delay(10);
-//    finalFlashRes = writeProgram(finalFlash, 0x7FFE);
-//    delay(10);
-    if (newFlashRes == false) {
+    bootloaderRes = writeProgram(bootloader, 0x7F00);
+    delay(10);
+    finalFlashRes = writeProgram(finalFlash, 0x7FFE);
+    delay(10);
+    if (newFlashRes == false || bootloaderRes == false || finalFlashRes == false) {
         return false;
     }
     return true;
@@ -193,7 +204,7 @@ bool writeProgram(std::vector<uint8_t> program, uint16_t addr) {
             writeBytes(flashAddr - cont);
             delay(10);
             if (!isMemoryCorrect(flashAddr, program, i - ((64*2)-2), 64)) {
-                if(contErrors > 10) {
+                if(contErrors > 6) {
                     digitalWrite(RECEIVING_BT_DATA_LED, LOW);
                     delay(100);
                     digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
