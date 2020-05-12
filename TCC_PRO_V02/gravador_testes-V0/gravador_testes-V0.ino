@@ -11,14 +11,14 @@
 #endif
 
 
-const int slaveSelectPin=5;
-const int start=15;
+const int SLAVE_SELECT_PIN=5;
+const int START=15;
 const int RECEIVING_BT_DATA_LED=2;
 
 BluetoothSerial SerialBT;
 std::vector<uint8_t> newBytes = {};
 
-const std::vector<uint8_t> bootloader = {
+const std::vector<uint8_t> BOOTLOADER = {
     0x11, 0x24, 0x84, 0xB7, 0x14, 0xBE, 0x81, 0xFF, 0xF0, 0xD0, 0x85, 0xE0, 0x80, 0x93, 0x81, 0x00,
     0x82, 0xE0, 0x80, 0x93, 0xC0, 0x00, 0x88, 0xE1, 0x80, 0x93, 0xC1, 0x00, 0x86, 0xE0, 0x80, 0x93,
     0xC2, 0x00, 0x80, 0xE1, 0x80, 0x93, 0xC4, 0x00, 0x8E, 0xE0, 0xC9, 0xD0, 0x25, 0x9A, 0x86, 0xE0,
@@ -53,17 +53,17 @@ const std::vector<uint8_t> bootloader = {
     0xFF, 0x27, 0x09, 0x94, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 };
 
-const std::vector<uint8_t> finalFlash = {
+const std::vector<uint8_t> FINAL_FLASH = {
     0x04, 0x04
 };
 
 void setup() {
-    pinMode(slaveSelectPin, OUTPUT);
-    digitalWrite(slaveSelectPin, HIGH);
-    pinMode(start, INPUT_PULLUP);
+    pinMode(SLAVE_SELECT_PIN, OUTPUT);
+    digitalWrite(SLAVE_SELECT_PIN, HIGH);
+    pinMode(START, INPUT_PULLUP);
     pinMode(RECEIVING_BT_DATA_LED, OUTPUT);
     SerialBT.begin("PLC - Bluetooth Recorder");
-    Serial.begin(9600);
+    // Serial.begin(9600);
 }
 
 void loop() {
@@ -71,7 +71,7 @@ void loop() {
         newBytes.push_back(SerialBT.read());
         digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
     }
-    if(digitalRead(start)==LOW) {
+    if(digitalRead(START)==LOW) {
         digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
         recordFlash();
     }
@@ -84,7 +84,7 @@ void recordFlash() {
     int contErros = 0;
     while ((success == false) && (contErros <= 4)) {
         SPI.begin(18, 19, 23, 5);
-        delay(100);
+        delay(200);
         habilitaProg();
         delay(10);
         success = writeFullProgram();
@@ -93,7 +93,7 @@ void recordFlash() {
         SPI.end();
     }
     if (success == true) {
-        Serial.println("\nGreat job!");
+        // Serial.println("\nGreat job!");
         digitalWrite(RECEIVING_BT_DATA_LED, LOW);
         delay(1000);
         digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
@@ -107,10 +107,10 @@ void recordFlash() {
         digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
         newBytes = {};
     }
-    digitalWrite(slaveSelectPin, HIGH);
+    digitalWrite(SLAVE_SELECT_PIN, HIGH);
 }
 
-bool writeFullProgram(){
+bool writeFullProgram() {
     bool newFlashRes = true;
     bool bootloaderRes = false;
     bool finalFlashRes = false;
@@ -120,9 +120,9 @@ bool writeFullProgram(){
         newFlashRes = writeProgram(newBytes, 0x0000);
         delay(10);
     }
-    bootloaderRes = writeProgram(bootloader, 0x7F00);
+    bootloaderRes = writeProgram(BOOTLOADER, 0x7F00);
     delay(10);
-    finalFlashRes = writeProgram(finalFlash, 0x7FFE);
+    finalFlashRes = writeProgram(FINAL_FLASH, 0x7FFE);
     delay(10);
     if (newFlashRes == false || bootloaderRes == false || finalFlashRes == false) {
         return false;
@@ -130,19 +130,19 @@ bool writeFullProgram(){
     return true;
 }
 
-void printFlashByAddress(uint16_t addr) {
-    uint16_t res = 0;
-    uint8_t aux = 0;
-    uint8_t high = spi_transfer4(0x28, addr >> 8, addr, 0x00);
-    uint8_t low = spi_transfer4(0x20, addr >> 8, addr, 0x00);
-    aux |= (low >> 4);
-    if(aux == 0) {
-      Serial.print("0");
-    }
-    res |= (low << 8);
-    res |= (high);
-    Serial.print(res, HEX);
-}
+// void printFlashByAddress(uint16_t addr) {
+//     uint16_t res = 0;
+//     uint8_t aux = 0;
+//     uint8_t high = spi_transfer4(0x28, addr >> 8, addr, 0x00);
+//     uint8_t low = spi_transfer4(0x20, addr >> 8, addr, 0x00);
+//     aux |= (low >> 4);
+//     // if(aux == 0) {
+//     //   Serial.print("0");
+//     // }
+//     res |= (low << 8);
+//     res |= (high);
+//     // Serial.print(res, HEX);
+// }
 
 uint16_t readFlashByAddress(uint16_t addr) {
     uint16_t res = 0;
@@ -153,25 +153,25 @@ uint16_t readFlashByAddress(uint16_t addr) {
     return res;
 }
 
-void printMemory(uint16_t startAddr, uint16_t finalAddr) {
-    for (uint16_t addr = startAddr; addr < finalAddr; addr++) {
-        if(((addr % 8) == 0) && addr != 0) {
-            Serial.println();
-        }
-        printFlashByAddress(addr);
-    }
-}
+// void printMemory(uint16_t startAddr, uint16_t finalAddr) {
+//     for (uint16_t addr = startAddr; addr < finalAddr; addr++) {
+//         if(((addr % 8) == 0) && addr != 0) {
+//             // Serial.println();
+//         }
+//         // printFlashByAddress(addr);
+//     }
+// }
 
 void habilitaProg() {
     uint8_t response = 0;
-    digitalWrite(slaveSelectPin, LOW);
+    digitalWrite(SLAVE_SELECT_PIN, LOW);
     delay(1000);
-    Serial.print("\nHabilitando programacao...\t");
+    // Serial.print("\nHabilitando programacao...\t");
     SPI.transfer(0xAC);
     SPI.transfer(0x53);
     response = SPI.transfer(0x00);
     SPI.transfer(0x00);
-    response != 0x53 ? Serial.print("NAO OK\n") : Serial.print("OK\n");
+    // response != 0x53 ? Serial.print("NAO OK\n") : Serial.print("OK\n");
     return;
 }
 
@@ -214,10 +214,10 @@ bool writeProgram(std::vector<uint8_t> program, uint16_t addr) {
                     digitalWrite(RECEIVING_BT_DATA_LED, HIGH);
                     return false;
                 }
-                Serial.print("flashAddr : ");
-                Serial.print(flashAddr, HEX);
-                Serial.print(", valor de i: ");
-                Serial.print(i);
+                // Serial.print("flashAddr : ");
+                // Serial.print(flashAddr, HEX);
+                // Serial.print(", valor de i: ");
+                // Serial.print(i);
                 contErrors++;
                 flashAddr -= 64;
                 i -= 128;
@@ -249,12 +249,12 @@ bool isMemoryCorrect(uint16_t flashAddr, std::vector<uint8_t> program, int dataA
         dataBytes |= (low << 8);
         dataBytes |= (high);
         if (dataBytes != memoryBytes) {
-            Serial.println("Yes, it's diferent ");
-            Serial.print("bytes on data: ");
-            Serial.print(dataBytes, HEX);
-            Serial.print(", bytes on memory: ");
-            Serial.print(memoryBytes, HEX);
-            Serial.println();
+            // Serial.println("Yes, it's diferent ");
+            // Serial.print("bytes on data: ");
+            // Serial.print(dataBytes, HEX);
+            // Serial.print(", bytes on memory: ");
+            // Serial.print(memoryBytes, HEX);
+            // Serial.println();
             return false;
         }
         dataIndex += 2;
